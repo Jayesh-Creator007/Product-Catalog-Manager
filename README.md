@@ -167,18 +167,4 @@ npm run dev
 
 ---
 
-## 📦 Data Model Relationships
 
-Category 1---N Subcategory 1---N Product
-
----
-
-## 🎯 Conclusion
-
-This project demonstrates a complete CRUD system that scales well for product management use cases such as e-commerce or inventory dashboards.
-
----
-
-## 📜 License
-
-MIT License.
