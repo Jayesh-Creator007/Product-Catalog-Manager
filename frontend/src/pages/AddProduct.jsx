@@ -13,6 +13,8 @@ export default function AddProduct() {
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState(true);
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -48,6 +50,31 @@ export default function AddProduct() {
     }
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate image
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        return;
+      }
+      
+      setImage(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImagePreview(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -59,13 +86,24 @@ export default function AddProduct() {
     setLoading(true);
 
     try {
-      const response = await API.post('/product', {
-        category_id: categoryId,
-        subcategory_id: subcategoryId,
-        p_name: name,
-        p_price: parseFloat(price),
-        p_description: description,
-        status,
+      // Use FormData for multipart/form-data
+      const formData = new FormData();
+      formData.append('category_id', categoryId);
+      formData.append('subcategory_id', subcategoryId);
+      formData.append('p_name', name);
+      formData.append('p_price', parseFloat(price));
+      formData.append('p_description', description);
+      formData.append('status', status);
+
+      // Add image if selected
+      if (image) {
+        formData.append('image', image);
+      }
+
+      const response = await API.post('/product', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       if (response.data.success) {
@@ -159,6 +197,39 @@ export default function AddProduct() {
             disabled={loading}
             placeholder="Enter description (optional)"
           />
+        </div>
+
+        {/* IMAGE UPLOAD SECTION */}
+        <div className="mb-3 p-3 border border-dashed">
+          <label className="form-label fw-semibold">Product Image (Optional)</label>
+          <input
+            type="file"
+            className="form-control"
+            accept="image/*"
+            onChange={handleImageChange}
+            disabled={loading}
+          />
+          <small className="text-muted d-block mt-2">Supported: JPG, PNG, GIF, WebP (Max 5MB)</small>
+
+          {/* Image Preview */}
+          {imagePreview && (
+            <div className="mt-3">
+              <p className="fw-semibold">Preview:</p>
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                style={{ maxWidth: '200px', maxHeight: '200px', objectFit: 'cover', borderRadius: '4px' }}
+              />
+              <br />
+              <button 
+                type="button" 
+                className="btn btn-sm btn-danger mt-2"
+                onClick={handleRemoveImage}
+              >
+                Remove Image
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="form-check mb-3">

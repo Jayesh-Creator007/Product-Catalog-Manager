@@ -23,6 +23,16 @@ const productSchema = new Schema({
         ...commonString,
         required : false
     },
+    image: {
+        type: String,
+        required: false,
+        trim: true
+    },
+    imagePublicId: {
+        type: String,
+        required: false,
+        trim: true
+    },
     status: {
         type: Boolean,
         default: true,

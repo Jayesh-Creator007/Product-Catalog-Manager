@@ -2,6 +2,7 @@ const Product = require("../models/productModel")
 const path = require('path')
 const fs = require('fs')
 const { createModel, viewMorePopulateModel } = require("../utils/commonModel.js")
+const { deleteFromCloudinary } = require("../middleware/cloudinaryUpload")
 
 
 
@@ -10,11 +11,25 @@ exports.store = async (req, res) => {
 
     const { category_id, subcategory_id, p_name, p_price, p_description, status } = req.body
 
-    console.log(req.file)
+    const productData = {
+        category_id,
+        subcategory_id,
+        p_name,
+        p_price,
+        p_description,
+        status,
+        p_image: req?.file?.filename
+    }
+
+    // Add Cloudinary image if available
+    if (req.cloudinaryUrl) {
+        productData.image = req.cloudinaryUrl
+        productData.imagePublicId = req.cloudinaryPublicId
+    }
 
     const result = await createModel(
         Product,
-        { category_id, subcategory_id, p_name, p_price, p_description, status, p_image: req?.file?.filename },
+        productData,
         "Product Added"
     )
 
@@ -42,26 +57,24 @@ exports.trash = async (req, res) => {
     const match = await Product.findById(id)
 
     if (match) {
+        // Delete from Cloudinary if image exists
+        if (match.imagePublicId) {
+            await deleteFromCloudinary(match.imagePublicId)
+        }
 
-        const imgPath = path.join(__dirname, '../uploads', match?.p_image)
+        // Delete local file if exists
+        if (match.p_image) {
+            const imgPath = path.join(__dirname, '../uploads', match?.p_image)
+            fs.unlink(imgPath, (err) => {
+                if (err) console.log('Local file not found')
+            })
+        }
 
-        fs.unlink(imgPath, async (err) => {
+        await Product.findByIdAndDelete(id)
 
-            if (err) {
-                res.json({
-                    success: false,
-                    message: "Image Path Not Found.."
-                })
-            } else {
-
-                await Product.findByIdAndDelete(id)
-
-                res.json({
-                    success: true,
-                    message: "Product Deleted Successfully.."
-                })
-            }
-
+        res.json({
+            success: true,
+            message: "Product Deleted Successfully.."
         })
 
     } else {
@@ -79,21 +92,37 @@ exports.update = async (req, res) => {
     const { id } = req.params
     const { category_id, subcategory_id, p_name, p_price, p_description, status } = req.body
 
-    console.log(req.file)
-    console.log(req.body)
-    console.log(id)
+    const product = await Product.findById(id)
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-        id,
-        { category_id, subcategory_id, p_name, p_price, p_description, status, p_image: req.file?.filename }
-    )
-
-    if (!updatedProduct) {
+    if (!product) {
         return res.json({
             success: false,
             message: "Product Not Found.."
         })
     }
+
+    const updateData = {
+        category_id,
+        subcategory_id,
+        p_name,
+        p_price,
+        p_description,
+        status,
+        p_image: req.file?.filename || product.p_image
+    }
+
+    // If new image from Cloudinary
+    if (req.cloudinaryUrl) {
+        // Delete old Cloudinary image if exists
+        if (product.imagePublicId) {
+            await deleteFromCloudinary(product.imagePublicId)
+        }
+
+        updateData.image = req.cloudinaryUrl
+        updateData.imagePublicId = req.cloudinaryPublicId
+    }
+
+    const updatedProduct = await Product.findByIdAndUpdate(id, updateData)
 
     res.json({
         success: true,

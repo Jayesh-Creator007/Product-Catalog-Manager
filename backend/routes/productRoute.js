@@ -1,19 +1,19 @@
 const { store, index, trash, update } = require('../controllers/productController')
 const upload = require('../middleware/upload')
-
-
+const { upload: cloudinaryUpload, uploadToCloudinary } = require('../middleware/cloudinaryUpload')
+const { verifyUser } = require('../middleware/verify')
 
 const router = require('express').Router()
 
 router
     .route('/')
-    .post(upload.single('p_image'), store)
+    .post(cloudinaryUpload.single('image'), uploadToCloudinary, store)
     .get(index)
 
 router
     .route('/:id')
-    .delete(trash)
-    .put(upload.single('p_image'), update)
+    .delete(verifyUser, trash)
+    .put(cloudinaryUpload.single('image'), uploadToCloudinary, update)
 
     
 
